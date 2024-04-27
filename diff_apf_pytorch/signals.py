@@ -102,8 +102,8 @@ def calculate_allpass_coefficients(cutoff_freq: torch.Tensor,
     a1 = -2 * torch.cos(omega)
     a2 = 1 - alpha
 
-    b = torch.stack([b0_a2, b1_a1, b2_a0], dim=1).view(bs, -1)
-    a = torch.stack([b2_a0, b1_a1, b0_a2], dim=1).view(bs, -1)
+    b = torch.stack([b0, b1, b2], dim=1).view(bs, -1)
+    a = torch.stack([a0, a1, a2], dim=1).view(bs, -1)
 
     # normalize
     b = b.type_as(cutoff_freq) / a0

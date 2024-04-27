@@ -14,93 +14,12 @@ from typing import List
 
 from losses import MultiResolutionSTFTLoss
 import diff_apf_pytorch.modules
+from model import ParameterNetwork
 from dataset import AudioDataset, phase_differece_feature
 
 # In this example we will train a neural network to perform automatic phase alignment.
 # We train the network to estimate the parameters of 6 cascaded all-pass filters.
 # Using the SDDS dataset, we pass in a target and train the network to align the input signal with the target / reference signal.
-
-
-class TCNBlock(torch.nn.Module):
-    '''
-    A simple TCN block with a dilated convolution and batch normalization.
-    
-    Parameters:
-        in_channels (int): number of input channels
-        out_channels (int): number of output channels
-        kernel_size (int): size of the convolutional kernel
-        dilation (int): dilation factor for the convolutional kernel
-    '''
-    def __init__(
-        self,
-        in_channels: int,
-        out_channels: int,
-        kernel_size: int,
-        dilation: int = 1,
-    ):
-        super().__init__()
-        self.conv1 = torch.nn.Conv1d(
-            in_channels,
-            out_channels,
-            kernel_size,
-            dilation=dilation,
-            stride=2,
-        )
-        self.relu1 = torch.nn.PReLU(out_channels)
-        self.bn1 = torch.nn.BatchNorm1d(out_channels)
-        self.conv2 = torch.nn.Conv1d(
-            out_channels,
-            out_channels,
-            kernel_size,
-            dilation=1,
-        )
-        self.relu2 = torch.nn.PReLU(out_channels)
-        self.bn2 = torch.nn.BatchNorm1d(out_channels)
-
-    def forward(self, x: torch.Tensor):
-        ''' Forward pass of the TCN block. '''
-        # apply convolutional layers
-        x = self.bn1(self.relu1(self.conv1(x)))
-        x = self.bn2(self.relu2(self.conv2(x)))
-        return x
-
-
-class ParameterNetwork(torch.nn.Module):
-    def __init__(self, num_control_params: int, ch_dim: int = 256) -> None:
-        super().__init__()
-        self.num_control_params = num_control_params
-
-        # A TCN with 10 blocks is used to estimate the parameters
-        # of the all-pass filters.
-        self.blocks = torch.nn.ModuleList()
-        self.blocks.append(TCNBlock(1, ch_dim, 7, dilation=1))
-        self.blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=2))
-        self.blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=4))
-        self.blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=8))
-        self.blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=16))
-        self.blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=1))
-        self.blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=2))
-        self.blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=4))
-        self.blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=8))
-        self.blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=16))
-
-        # A simple MLP is used to map the output of the TCN to the parameters.
-        self.mlp = torch.nn.Sequential(
-            torch.nn.Linear(ch_dim, 256),
-            torch.nn.ReLU(),
-            torch.nn.Linear(256, 256),
-            torch.nn.ReLU(),
-            torch.nn.Linear(256, num_control_params),
-        )
-
-    def forward(self, x: torch.Tensor):
-        # Apply the TCN blocks
-        for block in self.blocks:
-            x = block(x)
-        # Average / aggregate over time
-        x = x.mean(dim=-1)
-        # Apply the MLP to map to the parameters
-        return torch.sigmoid(self.mlp(x))
 
 
 def train(annotations: pd.DataFrame,
@@ -185,7 +104,7 @@ def train(annotations: pd.DataFrame,
 
             # Predicting the parameters of the all-pass filters using
             # the input signal as an input to the TCN
-            p_hat = net(input_x)
+            p_hat = net(input_x, target_y)
 
             # Apply the estimated parameters to the input signal
             # to align the phase
@@ -277,7 +196,7 @@ def validate(epoch: int,
     with torch.no_grad():
         # Predict the parameters of the all-pass filters using
         # the input signal as an input to the TCN
-        p_hat = net(input_x)
+        p_hat = net(input_x, target_y)
 
         # Apply the estimated parameters to the input signal
         x_hat = equalizer.process_normalized(input_x, p_hat).squeeze(0)
