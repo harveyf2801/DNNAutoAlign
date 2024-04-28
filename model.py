@@ -148,3 +148,27 @@ class ParameterNetwork(torch.nn.Module):
 
         # Apply MLP
         return torch.sigmoid(self.mlp(input_data))
+
+
+if __name__ == "__main__":
+    import numpy as np
+    from torchsummary import summary
+    from torchviz import make_dot
+
+    # Create a network instance
+    net = ParameterNetwork(num_control_params=6)
+    
+    # Print the network architecture
+    summary(net, input_size=[(1, 44100), (1, 44100)])
+
+    # Visualize the network architecture
+    # x = torch.zeros(1, 1, 44100, dtype=torch.float, requires_grad=True)
+    # y = torch.zeros(1, 1, 44100, dtype=torch.float, requires_grad=True)
+    # out = net(x, y)
+    # g = make_dot(out, params=dict(net.named_parameters())).render("attached", format="png")
+
+    # Print number of parameters
+    # n_params = 0
+    # for name, param in net.named_parameters():
+    #         n_params += np.prod(param.size())
+    # print(f'The model contains a total of {n_params:,} parameters.')
