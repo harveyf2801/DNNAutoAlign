@@ -166,7 +166,7 @@ def train(annotations: pd.DataFrame,
             #     sr=sample_rate
             # )
         
-        scheduler.step()
+        scheduler.step(np.mean(batch_loss_history))
 
 
 # def validate(epoch: int,

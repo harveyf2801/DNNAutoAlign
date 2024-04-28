@@ -13,5 +13,3 @@ no change     /home/hf1/.bashrc
 No action taken.
 ****** Training ******
 Epoch: 1
-****** Training ******
-Epoch: 1

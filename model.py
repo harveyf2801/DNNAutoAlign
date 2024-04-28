@@ -4,6 +4,23 @@ import torch
 # We train the network to estimate the parameters of 6 cascaded all-pass filters.
 # Using the SDDS dataset, we pass in a target and train the network to align the input signal with the target / reference signal.
 
+class FiLM(torch.nn.Module):
+    '''
+    Feature-wise Linear Modulation (FiLM) layer.
+    
+    Parameters:
+        input_size (int): Size of the input features
+        modulation_size (int): Size of the modulation vector
+    '''
+    def __init__(self, input_size: int, modulation_size: int):
+        super().__init__()
+        # A linear layer is used to estimate the gamma and beta parameters
+        self.linear = torch.nn.Linear(modulation_size, input_size * 2)
+
+    def forward(self, x: torch.Tensor, modulation: torch.Tensor):
+        # Apply FiLM modulation
+        gamma, beta = torch.chunk(self.linear(modulation), chunks=2, dim=-1)
+        return x * gamma.unsqueeze(-1) + beta.unsqueeze(-1)
 
 class TCNBlock(torch.nn.Module):
     '''
