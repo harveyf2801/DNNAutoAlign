@@ -26,7 +26,7 @@ from dataset import AudioDataset, phase_differece_feature
 def train(annotations: pd.DataFrame,
         audio_dir: str = "soundfiles",
         lr: float = 1e-5, # 2e-3
-        batch_size: int = 512, # 16
+        batch_size: int = 256, # 16
         num_epochs: int = 500, # 1000
         use_gpu: bool = False,
         log_dir: str = "outputs/diff_apf",

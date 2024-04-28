@@ -1,4 +1,5 @@
 import torch
+from gtnc_model import GatedTemporalConvBlock
 
 # In this example we will train a neural network to perform automatic phase alignment.
 # We train the network to estimate the parameters of 6 cascaded all-pass filters.
@@ -21,52 +22,7 @@ class FiLM(torch.nn.Module):
         # Apply FiLM modulation
         gamma, beta = torch.chunk(self.linear(modulation), chunks=2, dim=-1)
         return x * gamma.unsqueeze(-1) + beta.unsqueeze(-1)
-
-class TCNBlock(torch.nn.Module):
-    '''
-    A simple TCN block with a dilated convolution and batch normalization.
     
-    Parameters:
-        in_channels (int): number of input channels
-        out_channels (int): number of output channels
-        kernel_size (int): size of the convolutional kernel
-        dilation (int): dilation factor for the convolutional kernel
-    '''
-    def __init__(
-        self,
-        in_channels: int,
-        out_channels: int,
-        kernel_size: int,
-        dilation: int = 1,
-    ):
-        super().__init__()
-        self.conv1 = torch.nn.Conv1d(
-            in_channels,
-            out_channels,
-            kernel_size,
-            dilation=dilation,
-            stride=2,  # Adjusted stride for downsampling
-            padding=(kernel_size - 1) // 2 * dilation,
-        )
-        self.relu1 = torch.nn.PReLU(out_channels)
-        self.bn1 = torch.nn.BatchNorm1d(out_channels)
-        self.conv2 = torch.nn.Conv1d(
-            out_channels,
-            out_channels,
-            kernel_size,
-            dilation=1,
-            padding=(kernel_size - 1) // 2,
-        )
-        self.relu2 = torch.nn.PReLU(out_channels)
-        self.bn2 = torch.nn.BatchNorm1d(out_channels)
-
-    def forward(self, x: torch.Tensor):
-        ''' Forward pass of the TCN block. '''
-        # apply convolutional layers
-        x = self.bn1(self.relu1(self.conv1(x)))
-        x = self.bn2(self.relu2(self.conv2(x)))
-        return x
-
 
 class ParameterNetwork(torch.nn.Module):
     '''
@@ -76,78 +32,61 @@ class ParameterNetwork(torch.nn.Module):
         num_control_params (int): number of control parameters to estimate
         ch_dim (int): number of channels in the TCN blocks
     '''
-    def __init__(self, num_control_params: int, ch_dim: int = 256) -> None:
+    def __init__(self, num_control_params: int, ch_dim: int = 256, modulation_size: int = 128, num_heads: int = 8) -> None:
         super().__init__()
         self.num_control_params = num_control_params
+        self.num_heads = num_heads
         
-        # A TCN with 10 blocks is used to estimate the parameters
-        # of the all-pass filters.
-        # self.tcn_blocks = torch.nn.ModuleList([
-        #     TCNBlock(2, ch_dim, 7, dilation=2**i) for i in range(10)
-        # ])
-        self.tcn_blocks = torch.nn.ModuleList()
-        self.tcn_blocks.append(TCNBlock(2, ch_dim, 7, dilation=1))
-        self.tcn_blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=2))
-        self.tcn_blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=4))
-        self.tcn_blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=8))
-        self.tcn_blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=16))
-        self.tcn_blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=1))
-        self.tcn_blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=2))
-        self.tcn_blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=4))
-        self.tcn_blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=8))
-        self.tcn_blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=16))
+        # Gated Temporal Convolutional Network (GTCN)
+        self.gtcn_blocks = torch.nn.ModuleList()
+        self.gtcn_blocks.append(GatedTemporalConvBlock(2, ch_dim, 7, dilation=1))
+        self.gtcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=2))
+        self.gtcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=4))
+        self.gtcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=8))
+        self.gtcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=16))
+        self.gtcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=1))
+        self.gtcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=2))
+        self.gtcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=4))
+        self.gtcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=8))
+        self.gtcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=16))
 
-        # A simple MLP is used to map the output of the TCN to the parameters.
-        self.mlp = torch.nn.Sequential(
-            torch.nn.Linear(ch_dim, 512),
+        # MLP to map GTCN output to modulation vector
+        self.mlp_gtcn = torch.nn.Sequential(
+            torch.nn.Linear(ch_dim, modulation_size),
             torch.nn.ReLU(),
-            torch.nn.Dropout(0.5), # Adding regularisation
+            torch.nn.Linear(modulation_size, modulation_size),
+            torch.nn.ReLU(),
+        )
+
+        # FiLM layer
+        self.film = FiLM(input_size=ch_dim, modulation_size=modulation_size)
+
+        # MLP to map modulation vector to control parameters
+        self.mlp_film = torch.nn.Sequential(
+            torch.nn.Linear(modulation_size, 512),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(0.5), 
             torch.nn.Linear(512, 512),
             torch.nn.ReLU(),
             torch.nn.Linear(512, num_control_params),
         )
 
-        # Self-attention mechanism
-        self.attention = torch.nn.MultiheadAttention(embed_dim=ch_dim, num_heads=8)
-
-        # Parallel branches for multi-resolution processing
-        self.branch1 = torch.nn.Sequential(
-            torch.nn.Conv1d(2, ch_dim, kernel_size=7, dilation=1, padding=3),
-            torch.nn.ReLU(),
-            torch.nn.Conv1d(ch_dim, ch_dim, kernel_size=7, dilation=1, padding=3),
-            torch.nn.ReLU(),
-            torch.nn.AdaptiveAvgPool1d(1)  # Global average pooling
-        )
-
-        self.branch2 = torch.nn.Sequential(
-            torch.nn.Conv1d(2, ch_dim, kernel_size=7, dilation=2, padding=6),
-            torch.nn.ReLU(),
-            torch.nn.Conv1d(ch_dim, ch_dim, kernel_size=7, dilation=2, padding=6),
-            torch.nn.ReLU(),
-            torch.nn.AdaptiveAvgPool1d(1)  # Global average pooling
-        )
-
     def forward(self, x: torch.Tensor, y: torch.Tensor):
-        # Sum the input and target signal, then normalise them
-        # input_data = x + y
-        # input_data = input_data / torch.max(torch.abs(input_data))
-
+        # Concatenate input and target signal
         input_data = torch.cat([x, y], dim=1)
 
-        # Apply TCN blocks
-        for block in self.tcn_blocks:
+        # Apply GTCN blocks
+        for block in self.gtcn_blocks:
             input_data = block(input_data)
 
-        # Attention mechanism
-        input_data = input_data.permute(2, 0, 1)  # Reshape for multihead attention
-        attn_output, _ = self.attention(input_data, input_data, input_data)
-        input_data = attn_output.permute(1, 2, 0)  # Reshape back to (batch_size, seq_len, ch_dim)
+        # Apply MLP to get modulation vector
+        modulation = self.mlp_gtcn(torch.mean(input_data, dim=-1))
 
-        # Average over time
-        input_data = torch.mean(input_data, dim=-1)
+        # Apply FiLM modulation
+        input_data = self.film(input_data, modulation)
 
-        # Apply MLP
-        return torch.sigmoid(self.mlp(input_data))
+        # Apply MLP to get control parameters
+        return torch.sigmoid(self.mlp_film(modulation))
 
 
 if __name__ == "__main__":
