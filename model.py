@@ -65,25 +65,49 @@ class ParameterNetwork(torch.nn.Module):
         
         # A TCN with 10 blocks is used to estimate the parameters
         # of the all-pass filters.
-        self.x_blocks = torch.nn.ModuleList()
-        self.x_blocks.append(TCNBlock(2, ch_dim, 7, dilation=1))
-        self.x_blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=2))
-        self.x_blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=4))
-        self.x_blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=8))
-        self.x_blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=16))
-        self.x_blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=1))
-        self.x_blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=2))
-        self.x_blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=4))
-        self.x_blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=8))
-        self.x_blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=16))
+        # self.tcn_blocks = torch.nn.ModuleList([
+        #     TCNBlock(2, ch_dim, 7, dilation=2**i) for i in range(10)
+        # ])
+        self.tcn_blocks = torch.nn.ModuleList()
+        self.tcn_blocks.append(TCNBlock(2, ch_dim, 7, dilation=1))
+        self.tcn_blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=2))
+        self.tcn_blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=4))
+        self.tcn_blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=8))
+        self.tcn_blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=16))
+        self.tcn_blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=1))
+        self.tcn_blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=2))
+        self.tcn_blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=4))
+        self.tcn_blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=8))
+        self.tcn_blocks.append(TCNBlock(ch_dim, ch_dim, 7, dilation=16))
 
         # A simple MLP is used to map the output of the TCN to the parameters.
         self.mlp = torch.nn.Sequential(
-            torch.nn.Linear(ch_dim, 256),
+            torch.nn.Linear(ch_dim, 512),
             torch.nn.ReLU(),
-            torch.nn.Linear(256, 256),
+            torch.nn.Dropout(0.5), # Adding regularisation
+            torch.nn.Linear(512, 512),
             torch.nn.ReLU(),
-            torch.nn.Linear(256, num_control_params),
+            torch.nn.Linear(512, num_control_params),
+        )
+
+        # Self-attention mechanism
+        self.attention = torch.nn.MultiheadAttention(embed_dim=ch_dim, num_heads=8)
+
+        # Parallel branches for multi-resolution processing
+        self.branch1 = torch.nn.Sequential(
+            torch.nn.Conv1d(2, ch_dim, kernel_size=7, dilation=1, padding=3),
+            torch.nn.ReLU(),
+            torch.nn.Conv1d(ch_dim, ch_dim, kernel_size=7, dilation=1, padding=3),
+            torch.nn.ReLU(),
+            torch.nn.AdaptiveAvgPool1d(1)  # Global average pooling
+        )
+
+        self.branch2 = torch.nn.Sequential(
+            torch.nn.Conv1d(2, ch_dim, kernel_size=7, dilation=2, padding=6),
+            torch.nn.ReLU(),
+            torch.nn.Conv1d(ch_dim, ch_dim, kernel_size=7, dilation=2, padding=6),
+            torch.nn.ReLU(),
+            torch.nn.AdaptiveAvgPool1d(1)  # Global average pooling
         )
 
     def forward(self, x: torch.Tensor, y: torch.Tensor):
@@ -91,15 +115,19 @@ class ParameterNetwork(torch.nn.Module):
         # input_data = x + y
         # input_data = input_data / torch.max(torch.abs(input_data))
 
-        # Concatenate the input and target signal
         input_data = torch.cat([x, y], dim=1)
 
-        # Apply the TCN blocks
-        for block in self.x_blocks:
+        # Apply TCN blocks
+        for block in self.tcn_blocks:
             input_data = block(input_data)
 
-        # Average / aggregate over time
-        input_data = input_data.mean(dim=-1)
+        # Attention mechanism
+        input_data = input_data.permute(2, 0, 1)  # Reshape for multihead attention
+        attn_output, _ = self.attention(input_data, input_data, input_data)
+        input_data = attn_output.permute(1, 2, 0)  # Reshape back to (batch_size, seq_len, ch_dim)
 
-        # Apply the MLP to map to the parameters
+        # Average over time
+        input_data = torch.mean(input_data, dim=-1)
+
+        # Apply MLP
         return torch.sigmoid(self.mlp(input_data))

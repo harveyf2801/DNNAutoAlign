@@ -8,6 +8,7 @@ import diff_apf_pytorch
 import matplotlib.pyplot as plt
 from pathlib import Path
 from torch.utils.tensorboard import SummaryWriter
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from tqdm import tqdm
 from typing import List
@@ -24,9 +25,9 @@ from dataset import AudioDataset, phase_differece_feature
 
 def train(annotations: pd.DataFrame,
         audio_dir: str = "soundfiles",
-        lr: float = 2e-3,
-        batch_size: int = 16,
-        num_epochs: int = 1000,
+        lr: float = 1e-5, # 2e-3
+        batch_size: int = 512, # 16
+        num_epochs: int = 500, # 1000
         use_gpu: bool = False,
         log_dir: str = "outputs/diff_apf",
         sample_rate: int = 44100):
@@ -46,20 +47,25 @@ def train(annotations: pd.DataFrame,
 
     # Create the log directory
     os.makedirs(log_dir, exist_ok=True)
+
     # Create the parametric all-pass instance
     equalizer = diff_apf_pytorch.modules.ParametricEQ(sample_rate, max_q_factor=1.0)
+
     # Create the parameter estimation network
     net = ParameterNetwork(equalizer.num_params)
+
     # Create the optimizer
-    optimizer = torch.optim.Adam(net.parameters(), lr=lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
+    optimizer = torch.optim.Adam(net.parameters(), lr=lr, betas=(0.9, 0.999), eps=1e-8, weight_decay=0, amsgrad=False)
+
+    # Learning rate scheduler
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=5, verbose=True)
 
     # Using the custom SDDS dataset which returns the input and target pairs
     train_dataset = AudioDataset(annotations, audio_dir=audio_dir, fs=sample_rate)
-    test_dataset = AudioDataset(annotations, audio_dir=audio_dir, fs=sample_rate)
     dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size)
 
     # Create a folder to store the event files
-    folder = Path('runs1', 'diff_apf')
+    folder = Path('runs1', 'diff_apf3')
 
     # Create a SummaryWriter to log the training process to TensorBoard
     writer = SummaryWriter(folder)
@@ -136,17 +142,8 @@ def train(annotations: pd.DataFrame,
         # Plot the loss history
         # plotting.plot_loss(log_dir, epoch_loss_history)
 
-        # Validate the network every 10 epochs
-        if (epoch + 1) % 10 == 0:
-            validate(
-                epoch + 1,
-                test_dataset,
-                net,
-                equalizer,
-                log_dir=log_dir,
-                use_gpu=use_gpu,
-                sr=sample_rate
-            )
+        # Validate the network every 4 epochs
+        if (epoch + 1) % 4 == 0:
 
             # Save the network and optimizer state checkpoints
             checkpoint_path = os.path.join(log_dir, 'models')
@@ -158,67 +155,80 @@ def train(annotations: pd.DataFrame,
             'loss': loss},
             os.path.join(checkpoint_path, f"diff_apf_epoch_{epoch + 1}_loss_{loss}.pth"))
 
+            # validate the network
+            # validate(
+            #     epoch + 1,
+            #     test_dataset,
+            #     net,
+            #     equalizer,
+            #     log_dir=log_dir,
+            #     use_gpu=use_gpu,
+            #     sr=sample_rate
+            # )
+        
+        scheduler.step()
 
-def validate(epoch: int,
-            dataset: AudioDataset,
-            net: torch.nn.Module,
-            equalizer: diff_apf_pytorch.modules.Processor,
-            log_dir: str = "logs",
-            use_gpu: bool = False,
-            sr: int = 44100):
-    '''
-    Validate the network on random audio files from the dataset.
 
-    Parameters:
-        epoch (int): current epoch
-        dataset (AudioDataset): the dataset to validate on
-        net (torch.nn.Module): the trained network
-        equalizer (diff_apf_pytorch.modules.Processor): the parametric all-pass filter
-        log_dir (str): directory to save logs
-        use_gpu (bool): use GPU for training
-        sr (int): sample rate of the audio files
-    '''
-    # Create the audio log directory
-    audio_log_dir = os.path.join(log_dir, "audio")
-    os.makedirs(audio_log_dir, exist_ok=True)
+# def validate(epoch: int,
+#             dataset: AudioDataset,
+#             net: torch.nn.Module,
+#             equalizer: diff_apf_pytorch.modules.Processor,
+#             log_dir: str = "logs",
+#             use_gpu: bool = False,
+#             sr: int = 44100):
+#     '''
+#     Validate the network on random audio files from the dataset.
 
-    # Evaluate the network
-    net.eval()
+#     Parameters:
+#         epoch (int): current epoch
+#         dataset (AudioDataset): the dataset to validate on
+#         net (torch.nn.Module): the trained network
+#         equalizer (diff_apf_pytorch.modules.Processor): the parametric all-pass filter
+#         log_dir (str): directory to save logs
+#         use_gpu (bool): use GPU for training
+#         sr (int): sample rate of the audio files
+#     '''
+#     # Create the audio log directory
+#     audio_log_dir = os.path.join(log_dir, "audio")
+#     os.makedirs(audio_log_dir, exist_ok=True)
 
-    # Get a random audio pair from the dataset
-    input_x, target_y = dataset[0]
+#     # Evaluate the network
+#     net.eval()
 
-    # Move the input and target pairs to the GPU if available
-    if use_gpu:
-        input_x = input_x.cuda()
-        target_y = target_y.cuda()
+#     # Get a random audio pair from the dataset
+#     input_x, target_y = dataset[0]
 
-    with torch.no_grad():
-        # Predict the parameters of the all-pass filters using
-        # the input signal as an input to the TCN
-        p_hat = net(input_x, target_y)
+#     # Move the input and target pairs to the GPU if available
+#     if use_gpu:
+#         input_x = input_x.cuda()
+#         target_y = target_y.cuda()
 
-        # Apply the estimated parameters to the input signal
-        x_hat = equalizer.process_normalized(input_x, p_hat).squeeze(0)
+#     with torch.no_grad():
+#         # Predict the parameters of the all-pass filters using
+#         # the input signal as an input to the TCN
+#         p_hat = net(input_x, target_y)
 
-    # Plot the input, target, and predicted signals
-    # plotting.plot_response(y.squeeze(0), x_hat, x, epoch=epoch)
+#         # Apply the estimated parameters to the input signal
+#         x_hat = equalizer.process_normalized(input_x, p_hat).squeeze(0)
 
-    # Save the audio files as results
-    target_filename = f"epoch={epoch:03d}_target.wav"
-    input_filename = f"epoch={epoch:03d}_input.wav"
-    pred_filename = f"epoch={epoch:03d}_pred.wav"
-    target_filepath = os.path.join(audio_log_dir, target_filename)
-    input_filepath = os.path.join(audio_log_dir, input_filename)
-    pred_filepath = os.path.join(audio_log_dir, pred_filename)
-    torchaudio.save(target_filepath, target_y.cpu(), sr, backend="soundfile")
-    torchaudio.save(input_filepath, input_x.squeeze(0).cpu(), sr, backend="soundfile")
-    torchaudio.save(pred_filepath, x_hat.cpu(), sr, backend="soundfile")
+#     # Plot the input, target, and predicted signals
+#     # plotting.plot_response(y.squeeze(0), x_hat, x, epoch=epoch)
+
+#     # Save the audio files as results
+#     target_filename = f"epoch={epoch:03d}_target.wav"
+#     input_filename = f"epoch={epoch:03d}_input.wav"
+#     pred_filename = f"epoch={epoch:03d}_pred.wav"
+#     target_filepath = os.path.join(audio_log_dir, target_filename)
+#     input_filepath = os.path.join(audio_log_dir, input_filename)
+#     pred_filepath = os.path.join(audio_log_dir, pred_filename)
+#     torchaudio.save(target_filepath, target_y.cpu(), sr, backend="soundfile")
+#     torchaudio.save(input_filepath, input_x.squeeze(0).cpu(), sr, backend="soundfile")
+#     torchaudio.save(pred_filepath, x_hat.cpu(), sr, backend="soundfile")
 
 
 if __name__ == "__main__":
     # provide annotations to the SDDS dataset
     ann = pd.read_csv("annotations.csv")
     print("****** Training ******")
-    train(ann, "C:/Users/hfret/Downloads/SDDS", use_gpu=False)
+    train(ann, "/home/hf1/Documents/RLAutoAlign/soundfiles/SDDS_segmented_Allfiles", use_gpu=False)
     print("******** Done ********")
