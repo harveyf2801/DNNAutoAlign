@@ -26,7 +26,7 @@ from dataset import AudioDataset, phase_differece_feature
 def train(annotations: pd.DataFrame,
         audio_dir: str = "soundfiles",
         lr: float = 1e-5, # 2e-3
-        batch_size: int = 256, # 16
+        batch_size: int = 512, # 16 # 512
         num_epochs: int = 500, # 1000
         use_gpu: bool = False,
         log_dir: str = "outputs/diff_apf",
@@ -65,7 +65,7 @@ def train(annotations: pd.DataFrame,
     dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size)
 
     # Create a folder to store the event files
-    folder = Path('runs1', 'diff_apf3')
+    folder = Path('runs1', 'diff_apf4')
 
     # Create a SummaryWriter to log the training process to TensorBoard
     writer = SummaryWriter(folder)
@@ -143,7 +143,7 @@ def train(annotations: pd.DataFrame,
         # plotting.plot_loss(log_dir, epoch_loss_history)
 
         # Validate the network every 4 epochs
-        if (epoch + 1) % 4 == 0:
+        if (epoch + 1) % 2 == 0:
 
             # Save the network and optimizer state checkpoints
             checkpoint_path = os.path.join(log_dir, 'models')
@@ -229,6 +229,7 @@ def train(annotations: pd.DataFrame,
 if __name__ == "__main__":
     # provide annotations to the SDDS dataset
     ann = pd.read_csv("annotations.csv")
+
     print("****** Training ******")
     train(ann, "/home/hf1/Documents/RLAutoAlign/soundfiles/SDDS_segmented_Allfiles", use_gpu=False)
     print("******** Done ********")
