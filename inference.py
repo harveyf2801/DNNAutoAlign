@@ -5,14 +5,16 @@ import pandas as pd
 
 import diff_apf_pytorch.modules
 
+from losses import MultiResolutionSTFTLoss
 from dataset import AudioDataset
 from model import ParameterNetwork
 
 
 def validate(epoch: int,
-            dataset: AudioDataset,
+            dataloader: torch.utils.data.DataLoader,
             net: torch.nn.Module,
             equalizer: diff_apf_pytorch.modules.Processor,
+            loss,
             log_dir: str = "logs",
             use_gpu: bool = False,
             sr: int = 44100):
@@ -36,7 +38,9 @@ def validate(epoch: int,
     net.eval()
 
     # Get a random audio pair from the dataset
-    input_x, target_y = dataset[0][0], dataset[0][1]
+    data_iter = iter(dataloader)
+    data = next(data_iter)
+    input_x, target_y = data[0], data[1]
 
     # Move the input and target pairs to the GPU if available
     if use_gpu:
@@ -49,7 +53,7 @@ def validate(epoch: int,
         p_hat = net(input_x, target_y)
 
         # Apply the estimated parameters to the input signal
-        x_hat = equalizer.process_normalized(input_x, p_hat).squeeze(0)
+        x_hat = equalizer.process_normalized(input_x, p_hat)
 
     # Plot the input, target, and predicted signals
     # plotting.plot_response(y.squeeze(0), x_hat, x, epoch=epoch)
@@ -61,9 +65,22 @@ def validate(epoch: int,
     target_filepath = os.path.join(audio_log_dir, target_filename)
     input_filepath = os.path.join(audio_log_dir, input_filename)
     pred_filepath = os.path.join(audio_log_dir, pred_filename)
-    torchaudio.save(target_filepath, target_y.cpu(), sr, backend="soundfile")
+    torchaudio.save(target_filepath, target_y.squeeze(0).cpu(), sr, backend="soundfile")
     torchaudio.save(input_filepath, input_x.squeeze(0).cpu(), sr, backend="soundfile")
-    torchaudio.save(pred_filepath, x_hat.cpu(), sr, backend="soundfile")
+    torchaudio.save(pred_filepath, x_hat.squeeze(0).cpu(), sr, backend="soundfile")
+
+    print(loss(x_hat, target_y))
+
+    import sounddevice as sd
+    import time
+    audio_before = (input_x.squeeze(0) + target_y.squeeze(0)).cpu().numpy() / 2
+    audio_after = (x_hat.squeeze(0) + target_y.squeeze(0)).cpu().numpy() / 2
+
+    sd.play(audio_before[0], sr)
+    sd.wait()
+    time.sleep(0.2)
+    sd.play(audio_after[0], sr)
+    sd.wait()
 
 
 if __name__ == "__main__":
@@ -75,15 +92,19 @@ if __name__ == "__main__":
 
     # Using the custom SDDS dataset which returns the input and target pairs
     test_dataset = AudioDataset(annotations, audio_dir=audio_dir, fs=sample_rate)
+    dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=1)
 
     # Create the parametric all-pass instance
     equalizer = diff_apf_pytorch.modules.ParametricEQ(sample_rate, max_q_factor=1.0)
 
+    # Create the loss function
+    loss = MultiResolutionSTFTLoss()
+
     # Create the parameter estimation network
     net = ParameterNetwork(equalizer.num_params)
-    net.load_state_dict(torch.load("pretrained/diff_apf_epoch_10_loss_1.1950842142105103.pth")['model_state_dict'],
-                        map_location=torch.device('cpu'))
+    net.load_state_dict(torch.load("pretrained/diff_apf_epoch_10_loss_1.1950842142105103.pth",
+                                   map_location=torch.device('cpu'))['model_state_dict'],)
 
     print("****** Training ******")
-    validate(11, test_dataset, net, equalizer, use_gpu=False, sr=sample_rate)
+    validate(11, dataloader, net, equalizer, loss, use_gpu=False, sr=sample_rate)
     print("******** Done ********")

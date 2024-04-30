@@ -105,7 +105,7 @@ def train(annotations: pd.DataFrame,
             if use_gpu:
                 input_x = input_x.cuda()
                 target_y = target_y.cuda()
-
+            
             # RATHER THAN CREATING A FEATURE, WE PASS IN THE INPUT DIRECTLY
 
             # Predicting the parameters of the all-pass filters using
@@ -233,5 +233,5 @@ if __name__ == "__main__":
     use_gpu = torch.cuda.is_available()
 
     print("****** Training ******")
-    train(ann, "/home/hf1/Documents/RLAutoAlign/soundfiles/SDDS_segmented_Allfiles", use_gpu=use_gpu)
+    train(ann, "C:/Users/hfret/Downloads/SDDS", use_gpu=use_gpu)
     print("******** Done ********")

@@ -72,7 +72,6 @@ def phase_differece_feature(input_x: torch.Tensor, target_y: torch.Tensor) -> to
     x_phs = stft(input_x.view(-1, input_x.size(-1)))
     y_phs = stft(target_y.view(-1, target_y.size(-1)))
     phase_diff = torch.real(y_phs - x_phs)
-    print(phase_diff.shape)
     return phase_diff
 
 
