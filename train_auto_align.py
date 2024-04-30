@@ -26,7 +26,7 @@ from dataset import AudioDataset, phase_differece_feature
 def train(annotations: pd.DataFrame,
         audio_dir: str = "soundfiles",
         lr: float = 5e-6, # 1e-5 # 2e-3
-        batch_size: int = 8, # 16 # 512
+        batch_size: int = 512, # 16 # 512
         num_epochs: int = 500, # 1000
         use_gpu: bool = True,
         log_dir: str = "outputs/diff_apf",
@@ -64,14 +64,14 @@ def train(annotations: pd.DataFrame,
     epoch_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
 
     # Learning rate scheduler
-    plateau_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=5, verbose=True)
+    plateau_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=5)
 
     # Using the custom SDDS dataset which returns the input and target pairs
     train_dataset = AudioDataset(annotations, audio_dir=audio_dir, fs=sample_rate)
     dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size)
 
     # Create a folder to store the event files
-    folder = Path('runs1', 'diff_apf5')
+    folder = Path('runs1', 'diff_apf6')
 
     # Create a SummaryWriter to log the training process to TensorBoard
     writer = SummaryWriter(folder)
@@ -161,7 +161,7 @@ def train(annotations: pd.DataFrame,
             'model_state_dict': net.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'loss': loss},
-            os.path.join(checkpoint_path, f"GTCN_diff_apf_epoch_{epoch + 1}_loss_{loss}.pth"))
+            os.path.join(checkpoint_path, f"TCN_diff_apf_epoch_{epoch + 1}_loss_{loss}.pth"))
 
             # validate the network
             # validate(

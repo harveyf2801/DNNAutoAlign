@@ -1,5 +1,5 @@
 import torch
-from gtnc_model import GatedTemporalConvBlock
+from gtnc_model import TemporalConvBlock
 
 
 class FiLM(torch.nn.Module):
@@ -29,23 +29,23 @@ class ParameterNetwork(torch.nn.Module):
         num_control_params (int): number of control parameters to estimate
         ch_dim (int): number of channels in the TCN blocks
     '''
-    def __init__(self, num_control_params: int, ch_dim: int = 128, modulation_size: int = 64, num_heads: int = 8) -> None:
+    def __init__(self, num_control_params: int, ch_dim: int = 256, modulation_size: int = 128, num_heads: int = 8) -> None:
         super().__init__()
         self.num_control_params = num_control_params
-        self.num_heads = num_heads
+        self.num_heads = num_heads # was used to trial self attention based network
         
         # Gated Temporal Convolutional Network (GTCN)
         self.tcn_blocks = torch.nn.ModuleList()
-        self.tcn_blocks.append(GatedTemporalConvBlock(2, ch_dim, 7, dilation=1))
-        self.tcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=2))
-        self.tcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=4))
-        self.tcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=8))
-        self.tcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=16))
-        self.tcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=1))
-        self.tcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=2))
-        self.tcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=4))
-        self.tcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=8))
-        self.tcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=16))
+        self.tcn_blocks.append(TemporalConvBlock(2, ch_dim, 7, dilation=1))
+        self.tcn_blocks.append(TemporalConvBlock(ch_dim, ch_dim, 7, dilation=2))
+        self.tcn_blocks.append(TemporalConvBlock(ch_dim, ch_dim, 7, dilation=4))
+        self.tcn_blocks.append(TemporalConvBlock(ch_dim, ch_dim, 7, dilation=8))
+        self.tcn_blocks.append(TemporalConvBlock(ch_dim, ch_dim, 7, dilation=16))
+        self.tcn_blocks.append(TemporalConvBlock(ch_dim, ch_dim, 7, dilation=1))
+        self.tcn_blocks.append(TemporalConvBlock(ch_dim, ch_dim, 7, dilation=2))
+        self.tcn_blocks.append(TemporalConvBlock(ch_dim, ch_dim, 7, dilation=4))
+        self.tcn_blocks.append(TemporalConvBlock(ch_dim, ch_dim, 7, dilation=8))
+        self.tcn_blocks.append(TemporalConvBlock(ch_dim, ch_dim, 7, dilation=16))
 
         # MLP to map GTCN output to modulation vector
         self.mlp_gtcn = torch.nn.Sequential(
@@ -62,7 +62,9 @@ class ParameterNetwork(torch.nn.Module):
         self.mlp_film = torch.nn.Sequential(
             torch.nn.Linear(modulation_size, ch_dim*2),
             torch.nn.ReLU(),
-            torch.nn.Dropout(0.5),
+            torch.nn.Dropout(0.5), 
+            torch.nn.Linear(ch_dim*2, ch_dim*2),
+            torch.nn.ReLU(),
             torch.nn.Linear(ch_dim*2, num_control_params),
         )
 
