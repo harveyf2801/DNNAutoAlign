@@ -28,7 +28,7 @@ def train(annotations: pd.DataFrame,
         lr: float = 1e-5, # 2e-3
         batch_size: int = 512, # 16 # 512
         num_epochs: int = 500, # 1000
-        use_gpu: bool = False,
+        use_gpu: bool = True,
         log_dir: str = "outputs/diff_apf",
         sample_rate: int = 44100):
     '''
@@ -105,7 +105,7 @@ def train(annotations: pd.DataFrame,
             if use_gpu:
                 input_x = input_x.cuda()
                 target_y = target_y.cuda()
-
+            
             # RATHER THAN CREATING A FEATURE, WE PASS IN THE INPUT DIRECTLY
 
             # Predicting the parameters of the all-pass filters using
@@ -172,6 +172,8 @@ if __name__ == "__main__":
     # provide annotations to the SDDS dataset
     ann = pd.read_csv("annotations.csv")
 
+    use_gpu = torch.cuda.is_available()
+
     print("****** Training ******")
-    train(ann, "/home/hf1/Documents/RLAutoAlign/soundfiles/SDDS_segmented_Allfiles", use_gpu=False)
+    train(ann, "C:/Users/hfret/Downloads/SDDS", use_gpu=use_gpu)
     print("******** Done ********")

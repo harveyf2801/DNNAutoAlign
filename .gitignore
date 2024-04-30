@@ -160,3 +160,4 @@ cython_debug/
 #.idea/
 
 *.pth
+hf_diff_apf_training*.txt
