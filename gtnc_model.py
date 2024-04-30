@@ -68,3 +68,49 @@ class GatedTemporalConvBlock(torch.nn.Module):
         x = self.dropout(x)  # Apply dropout
 
         return x
+
+
+class TemporalConvBlock(torch.nn.Module):
+    '''
+    A simple TCN block with a dilated convolution and batch normalization.
+    
+    Parameters:
+        in_channels (int): number of input channels
+        out_channels (int): number of output channels
+        kernel_size (int): size of the convolutional kernel
+        dilation (int): dilation factor for the convolutional kernel
+    '''
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int,
+        dilation: int = 1,
+    ):
+        super().__init__()
+        self.conv1 = torch.nn.Conv1d(
+            in_channels,
+            out_channels,
+            kernel_size,
+            dilation=dilation,
+            stride=2,  # Adjusted stride for downsampling
+            padding=(kernel_size - 1) // 2 * dilation,
+        )
+        self.relu1 = torch.nn.PReLU(out_channels)
+        self.bn1 = torch.nn.BatchNorm1d(out_channels)
+        self.conv2 = torch.nn.Conv1d(
+            out_channels,
+            out_channels,
+            kernel_size,
+            dilation=1,
+            padding=(kernel_size - 1) // 2,
+        )
+        self.relu2 = torch.nn.PReLU(out_channels)
+        self.bn2 = torch.nn.BatchNorm1d(out_channels)
+
+    def forward(self, x: torch.Tensor):
+        ''' Forward pass of the TCN block. '''
+        # apply convolutional layers
+        x = self.bn1(self.relu1(self.conv1(x)))
+        x = self.bn2(self.relu2(self.conv2(x)))
+        return x

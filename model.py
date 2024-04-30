@@ -1,9 +1,6 @@
 import torch
-from gtnc_model import GatedTemporalConvBlock
+from gtnc_model import TemporalConvBlock
 
-# In this example we will train a neural network to perform automatic phase alignment.
-# We train the network to estimate the parameters of 6 cascaded all-pass filters.
-# Using the SDDS dataset, we pass in a target and train the network to align the input signal with the target / reference signal.
 
 class FiLM(torch.nn.Module):
     '''
@@ -38,17 +35,17 @@ class ParameterNetwork(torch.nn.Module):
         self.num_heads = num_heads
         
         # Gated Temporal Convolutional Network (GTCN)
-        self.gtcn_blocks = torch.nn.ModuleList()
-        self.gtcn_blocks.append(GatedTemporalConvBlock(2, ch_dim, 7, dilation=1))
-        self.gtcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=2))
-        self.gtcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=4))
-        self.gtcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=8))
-        self.gtcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=16))
-        self.gtcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=1))
-        self.gtcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=2))
-        self.gtcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=4))
-        self.gtcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=8))
-        self.gtcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=16))
+        self.tcn_blocks = torch.nn.ModuleList()
+        self.tcn_blocks.append(TemporalConvBlock(2, ch_dim, 7, dilation=1))
+        self.tcn_blocks.append(TemporalConvBlock(ch_dim, ch_dim, 7, dilation=2))
+        self.tcn_blocks.append(TemporalConvBlock(ch_dim, ch_dim, 7, dilation=4))
+        self.tcn_blocks.append(TemporalConvBlock(ch_dim, ch_dim, 7, dilation=8))
+        self.tcn_blocks.append(TemporalConvBlock(ch_dim, ch_dim, 7, dilation=16))
+        self.tcn_blocks.append(TemporalConvBlock(ch_dim, ch_dim, 7, dilation=1))
+        self.tcn_blocks.append(TemporalConvBlock(ch_dim, ch_dim, 7, dilation=2))
+        self.tcn_blocks.append(TemporalConvBlock(ch_dim, ch_dim, 7, dilation=4))
+        self.tcn_blocks.append(TemporalConvBlock(ch_dim, ch_dim, 7, dilation=8))
+        self.tcn_blocks.append(TemporalConvBlock(ch_dim, ch_dim, 7, dilation=16))
 
         # MLP to map GTCN output to modulation vector
         self.mlp_gtcn = torch.nn.Sequential(
@@ -76,7 +73,7 @@ class ParameterNetwork(torch.nn.Module):
         input_data = torch.cat([x, y], dim=1)
 
         # Apply GTCN blocks
-        for block in self.gtcn_blocks:
+        for block in self.tcn_blocks:
             input_data = block(input_data)
 
         # Apply MLP to get modulation vector
