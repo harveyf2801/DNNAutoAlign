@@ -29,7 +29,7 @@ class ParameterNetwork(torch.nn.Module):
         num_control_params (int): number of control parameters to estimate
         ch_dim (int): number of channels in the TCN blocks
     '''
-    def __init__(self, num_control_params: int, ch_dim: int = 256, modulation_size: int = 128, num_heads: int = 8) -> None:
+    def __init__(self, num_control_params: int, ch_dim: int = 128, modulation_size: int = 64, num_heads: int = 8) -> None:
         super().__init__()
         self.num_control_params = num_control_params
         self.num_heads = num_heads
@@ -60,12 +60,10 @@ class ParameterNetwork(torch.nn.Module):
 
         # MLP to map modulation vector to control parameters
         self.mlp_film = torch.nn.Sequential(
-            torch.nn.Linear(modulation_size, 512),
+            torch.nn.Linear(modulation_size, ch_dim*2),
             torch.nn.ReLU(),
-            torch.nn.Dropout(0.5), 
-            torch.nn.Linear(512, 512),
-            torch.nn.ReLU(),
-            torch.nn.Linear(512, num_control_params),
+            torch.nn.Dropout(0.5),
+            torch.nn.Linear(ch_dim*2, num_control_params),
         )
 
     def forward(self, x: torch.Tensor, y: torch.Tensor):
