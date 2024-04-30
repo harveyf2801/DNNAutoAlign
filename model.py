@@ -1,5 +1,5 @@
 import torch
-from gtnc_model import TemporalConvBlock
+from gtnc_model import GatedTemporalConvBlock
 
 
 class FiLM(torch.nn.Module):
@@ -36,16 +36,16 @@ class ParameterNetwork(torch.nn.Module):
         
         # Gated Temporal Convolutional Network (GTCN)
         self.tcn_blocks = torch.nn.ModuleList()
-        self.tcn_blocks.append(TemporalConvBlock(2, ch_dim, 7, dilation=1))
-        self.tcn_blocks.append(TemporalConvBlock(ch_dim, ch_dim, 7, dilation=2))
-        self.tcn_blocks.append(TemporalConvBlock(ch_dim, ch_dim, 7, dilation=4))
-        self.tcn_blocks.append(TemporalConvBlock(ch_dim, ch_dim, 7, dilation=8))
-        self.tcn_blocks.append(TemporalConvBlock(ch_dim, ch_dim, 7, dilation=16))
-        self.tcn_blocks.append(TemporalConvBlock(ch_dim, ch_dim, 7, dilation=1))
-        self.tcn_blocks.append(TemporalConvBlock(ch_dim, ch_dim, 7, dilation=2))
-        self.tcn_blocks.append(TemporalConvBlock(ch_dim, ch_dim, 7, dilation=4))
-        self.tcn_blocks.append(TemporalConvBlock(ch_dim, ch_dim, 7, dilation=8))
-        self.tcn_blocks.append(TemporalConvBlock(ch_dim, ch_dim, 7, dilation=16))
+        self.tcn_blocks.append(GatedTemporalConvBlock(2, ch_dim, 7, dilation=1))
+        self.tcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=2))
+        self.tcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=4))
+        self.tcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=8))
+        self.tcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=16))
+        self.tcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=1))
+        self.tcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=2))
+        self.tcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=4))
+        self.tcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=8))
+        self.tcn_blocks.append(GatedTemporalConvBlock(ch_dim, ch_dim, 7, dilation=16))
 
         # MLP to map GTCN output to modulation vector
         self.mlp_gtcn = torch.nn.Sequential(

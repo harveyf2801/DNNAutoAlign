@@ -25,7 +25,7 @@ from dataset import AudioDataset, phase_differece_feature
 
 def train(annotations: pd.DataFrame,
         audio_dir: str = "soundfiles",
-        lr: float = 1e-5, # 2e-3
+        lr: float = 5e-6, # 1e-5 # 2e-3
         batch_size: int = 512, # 16 # 512
         num_epochs: int = 500, # 1000
         use_gpu: bool = True,
@@ -54,18 +54,24 @@ def train(annotations: pd.DataFrame,
     # Create the parameter estimation network
     net = ParameterNetwork(equalizer.num_params)
 
+    # Gradient clipping value
+    max_grad_norm = 1.0
+
     # Create the optimizer
     optimizer = torch.optim.Adam(net.parameters(), lr=lr, betas=(0.9, 0.999), eps=1e-8, weight_decay=0, amsgrad=False)
+    
+    # Learning rate scheduler based on epoch count
+    epoch_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
 
     # Learning rate scheduler
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=5, verbose=True)
+    plateau_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=5, verbose=True)
 
     # Using the custom SDDS dataset which returns the input and target pairs
     train_dataset = AudioDataset(annotations, audio_dir=audio_dir, fs=sample_rate)
     dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size)
 
     # Create a folder to store the event files
-    folder = Path('runs1', 'diff_apf4')
+    folder = Path('runs1', 'diff_apf5')
 
     # Create a SummaryWriter to log the training process to TensorBoard
     writer = SummaryWriter(folder)
@@ -126,6 +132,8 @@ def train(annotations: pd.DataFrame,
             # using the optimizer
             optimizer.zero_grad()
             loss.backward()
+            # Gradient clipping to prevent exploding gradients
+            torch.nn.utils.clip_grad_norm_(net.parameters(), max_grad_norm)
             optimizer.step()
 
             # Log the loss to TensorBoard and update the steps
@@ -153,7 +161,7 @@ def train(annotations: pd.DataFrame,
             'model_state_dict': net.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'loss': loss},
-            os.path.join(checkpoint_path, f"diff_apf_epoch_{epoch + 1}_loss_{loss}.pth"))
+            os.path.join(checkpoint_path, f"GTCN_diff_apf_epoch_{epoch + 1}_loss_{loss}.pth"))
 
             # validate the network
             # validate(
@@ -166,7 +174,11 @@ def train(annotations: pd.DataFrame,
             #     sr=sample_rate
             # )
         
-        scheduler.step(np.mean(batch_loss_history))
+        # Step the epoch-based learning rate scheduler
+        epoch_scheduler.step()
+
+        # Step the learning rate scheduler based on the average loss of the epoch
+        plateau_scheduler.step(loss, epoch=epoch)
 
 if __name__ == "__main__":
     # provide annotations to the SDDS dataset
@@ -174,6 +186,8 @@ if __name__ == "__main__":
 
     use_gpu = torch.cuda.is_available()
 
+    print("Using GPU:", use_gpu)
+
     print("****** Training ******")
-    train(ann, "C:/Users/hfret/Downloads/SDDS", use_gpu=use_gpu)
+    train(ann, "/home/hf1/Documents/RLAutoAlign/soundfiles/SDDS_segmented_Allfiles", use_gpu=use_gpu)
     print("******** Done ********")
