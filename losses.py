@@ -3,6 +3,7 @@ import torchaudio
 from torch.nn import Module
 from torch import Tensor
 import torch.nn.functional as F
+from torch.nn import MSELoss
 import numpy as np
 
 """STFT and Multi Resolution STFT Loss Modules.
@@ -22,7 +23,7 @@ class STFTLoss(torch.nn.Module):
         self.win_length = win_length
         self.window = getattr(torch, window)(win_length)
         self.eps = eps
-        self.loss = torch.nn.MSELoss(reduction='mean')
+        self.loss = MSELoss(reduction='mean')
 
     def stft(self, x):
         x_stft = torch.stft(

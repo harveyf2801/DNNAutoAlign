@@ -134,7 +134,43 @@ class AudioDataset(torch.nn.Module):
         target_audio = self.load_audio(Path(self.audio_dir, target_df['FileName'].values[0]))
 
         return input_audio, target_audio
+
+
+class TestAudioDataset(AudioDataset):
+    """
+    Audio dataset class.
+    
+    Parameters:
+    annotations (pd.DataFrame): Annotations dataframe.
+    audio_dir (str): Audio directory.
+    fs (int): Sample rate.
+    """
+    def __init__(
+        self,
+        annotations: pd.DataFrame,
+        audio_dir: str = "soundfiles",
+        fs: int = 44100,
+    ) -> None:
+        super().__init__(annotations, audio_dir, fs)
+
+    def __len__(self):
+        return len(self.annotations.query(f'Position == "SHL"'))
+
+    def __getitem__(self, idx: int):
+        # Selecting a random class
+        class_id = np.random.choice(self.annotations['ClassID'].unique())
+
+        # Selecting a random top and bottom snare record from annotations
+        df = self.annotations.query(f'(ClassID == {class_id}) & (Position == "SHL")').sample(n=2)
+        input_df, target_df = df.iloc[0], df.iloc[1]
+
+        # Load audio
+        input_audio = self.load_audio(Path(self.audio_dir, input_df['FileName']))
+        target_audio = self.load_audio(Path(self.audio_dir, target_df['FileName']))
+
+        return input_audio, target_audio
+    
     
 if __name__ == '__main__':
-    ann = pd.read_csv('annotations.csv')
-    ds = AudioDataset(ann, 'C:/Users/hfret/Downloads/SDDS', 44100)
+    ann = pd.read_csv('/home/hf1/Documents/soundfiles/annotations.csv')
+    ds = TestAudioDataset(ann, '/home/hf1/Documents/soundfiles/SDDS_segmented_Allfiles/', 44100)
