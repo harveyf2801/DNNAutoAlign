@@ -34,7 +34,7 @@ class ParameterNetwork(torch.nn.Module):
         self.num_control_params = num_control_params
         self.num_heads = num_heads # was used to trial self attention based network
         
-        # Gated Temporal Convolutional Network (GTCN)
+        # Gated Temporal Convolutional Network (TCN)
         self.tcn_blocks = torch.nn.ModuleList()
         self.tcn_blocks.append(TemporalConvBlock(2, ch_dim, 7, dilation=1))
         self.tcn_blocks.append(TemporalConvBlock(ch_dim, ch_dim, 7, dilation=2))
