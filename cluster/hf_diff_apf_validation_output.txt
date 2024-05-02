@@ -11,6 +11,4 @@ no change     /applications/anaconda3/lib/python3.9/site-packages/xontrib/conda.
 no change     /applications/anaconda3/etc/profile.d/conda.csh
 no change     /home/hf1/.bashrc
 No action taken.
-RMS -23.449233344070297
-Peak -2.4459976957611014
-THDN 79.1449028630653
+THDN 79.49130345495439

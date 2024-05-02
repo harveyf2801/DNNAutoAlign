@@ -144,7 +144,7 @@ def validate(epoch: int,
             for loudness_key, loudness_func in loudness.items():
                 total_loudness[loudness_key] += loudness_func(mix)
             for quality_key, quality_func in quality.items():
-                total_quality[quality_key] += quality_func(target_y, x_hat)
+                total_quality[quality_key] += quality_func(x_hat)
             
             total_samples += 1
 
