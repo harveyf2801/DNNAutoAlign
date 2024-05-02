@@ -1,7 +1,7 @@
 # Differentiable All-Pass DNNs
 
 This project aims to align an input signal with a target / reference signal using differentiable all-pass filters.
-The Parameter Network will control the individual parameters to align the phase of both signals. The filters consist of 2nd order all-pass filters, and are applied using the frequency sampling method to approximate a cascade of IIR filters. This method along with the main network architecture was taken from the [DASP library](https://github.com/csteinmetz1/dasp-pytorch/tree/main). A Temporal Convolutional Network (TCN) is used to train the model as it allows the model to learn based on the whole time domain signal and avoids phase estimation.
+The Parameter Network will control the individual parameters to align the phase of both signals. The filters consist of 2nd order all-pass filters, and are applied using the frequency sampling method to approximate a cascade of IIR filters. This method along with the main network architecture was adapted from the [DASP library](https://github.com/csteinmetz1/dasp-pytorch/tree/main). A Temporal Convolutional Network (TCN) is used to train the model as it allows the model to learn based on the whole time domain signal and avoids phase estimation.
 
 ## Citations
 
