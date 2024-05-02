@@ -133,17 +133,9 @@ def validate(epoch: int,
             n = 10
 
             p_hat = net(input_x, target_y)
-            execution_time = timeit.timeit(stmt='net(input_x, target_y)',
-                                   globals=globals(), number=n)
-
-            print("Parameter execution time:", execution_time, "seconds")
 
             # Apply the estimated parameters to the input signal
             x_hat = equalizer.process_normalized(input_x, p_hat)
-            execution_time = timeit.timeit(stmt='equalizer.process_normalized(input_x, p_hat)',
-                                   globals=globals(), number=n)
-
-            print("Filter Execution time:", execution_time, "seconds")
 
             # Convert the signals to the CPU
             x_hat = x_hat.squeeze(0).numpy()[0]
