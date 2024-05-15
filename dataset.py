@@ -45,7 +45,7 @@ def stft(x: torch.Tensor,
     Returns:
     torch.Tensor: Short-time Fourier transform.
     """
-    window = getattr(torch, window)(win_length)
+    window = getattr(torch, window)(win_length).to(x.device)
     x_stft = torch.stft(
                     x,
                     fft_size,

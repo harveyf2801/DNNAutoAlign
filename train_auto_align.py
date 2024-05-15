@@ -15,10 +15,11 @@ from typing import List
 
 from losses import MultiResolutionSTFTLoss
 import diff_apf_pytorch.modules
-from model import ParameterNetwork
+from phase_difference_model import ParameterNetwork
 from dataset import AudioDataset, phase_differece_feature
 
 FS = 44100
+MODEL_TYPE = "PhaseFeature"
 
 ############################################
 # Setting up multiple gpu cores
@@ -52,12 +53,11 @@ net = ParameterNetwork(equalizer.num_params)
 # Using the SDDS dataset, we pass in a target and train the network to align the input signal with the target / reference signal.
 
 annotations = pd.read_csv("annotations.csv")
-audio_dir = "/home/hf1/Documents/RLAutoAlign/soundfiles/SDDS_segmented_Allfiles"
+audio_dir = "/home/hf1/Documents/soundfiles/SDDS_segmented_Allfiles"
 lr = 5e-6 # 1e-5 # 2e-3
-batch_size = 16 # 16 # 512
-num_epochs = 500 # 1000
-log_dir = "outputs/diff_apf"
-ann = pd.read_csv("annotations.csv")
+batch_size = 256 # 16 # 512
+num_epochs = 1000 # 1000
+log_dir = f"outputs/{MODEL_TYPE}_diff_apf"
 
 # Create the log directory
 os.makedirs(log_dir, exist_ok=True)
@@ -79,7 +79,12 @@ train_dataset = AudioDataset(annotations, audio_dir=audio_dir, fs=FS)
 dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size)
 
 # Create a folder to store the event files
-folder = Path('runs1', 'diff_apf6')
+# increment the folder name if it already exists
+folder = Path('runs', f'{MODEL_TYPE}_diff_apf')
+i = 1
+while folder.exists():
+    folder = Path('runs', f'{MODEL_TYPE}_diff_apf_{i}')
+    i += 1
 
 # Create a SummaryWriter to log the training process to TensorBoard
 writer = SummaryWriter(folder)
@@ -124,8 +129,9 @@ for epoch in range(num_epochs):
         # RATHER THAN CREATING A FEATURE, WE PASS IN THE INPUT DIRECTLY
 
         # Predicting the parameters of the all-pass filters using
-        # the input signal as an input to the TCN
-        p_hat = net(input_x, target_y)
+        # the phase difference analysis feature as an input to the network
+        feature = phase_differece_feature(input_x, target_y)
+        p_hat = net(feature)
 
         # Apply the estimated parameters to the input signal
         # to align the phase
@@ -170,7 +176,7 @@ for epoch in range(num_epochs):
         'model_state_dict': net.state_dict(),
         'optimizer_state_dict': optimizer.state_dict(),
         'loss': loss},
-        os.path.join(checkpoint_path, f"TCN_diff_apf_epoch_{epoch + 1}_loss_{loss}.pth"))
+        os.path.join(checkpoint_path, f"{MODEL_TYPE}_diff_apf_epoch_{epoch + 1}_loss_{loss}.pth"))
     
     # Step the epoch-based learning rate scheduler
     epoch_scheduler.step()
