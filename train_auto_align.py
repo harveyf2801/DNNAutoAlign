@@ -13,13 +13,13 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from tqdm import tqdm
 from typing import List
 
-from losses import MultiResolutionSTFTLoss
+from losses import MultiResolutionSTFTLoss, MSELoss
 import diff_apf_pytorch.modules
 from phase_difference_model import ParameterNetwork
 from dataset import AudioDataset, phase_differece_feature
 
 FS = 44100
-MODEL_TYPE = "PhaseFeatureMSE"
+MODEL_TYPE = "MSE_PhaseFeature"
 
 ############################################
 # Setting up multiple gpu cores
@@ -90,11 +90,13 @@ while folder.exists():
 writer = SummaryWriter(folder)
 
 # Create the MR-STFT loss function (using Abargum (2023) version)
-criterion = MultiResolutionSTFTLoss(
-    fft_sizes=[1024, 512, 2048],
-    hop_sizes=[120, 50, 240],
-    win_lengths=[600, 240, 1200]
-)
+# criterion = MultiResolutionSTFTLoss(
+#     fft_sizes=[1024, 512, 2048],
+#     hop_sizes=[120, 50, 240],
+#     win_lengths=[600, 240, 1200]
+# )
+# Try using the MSE loss function instead
+criterion = MSELoss(reduction='mean')
 
 # Move the network and loss function to the GPU if available
 net = net.to(gpu)
