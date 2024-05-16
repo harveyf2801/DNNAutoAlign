@@ -19,7 +19,7 @@ from phase_difference_model import ParameterNetwork
 from dataset import AudioDataset, phase_differece_feature
 
 FS = 44100
-MODEL_TYPE = "PhaseFeature"
+MODEL_TYPE = "PhaseFeatureMSE"
 
 ############################################
 # Setting up multiple gpu cores
@@ -54,7 +54,7 @@ net = ParameterNetwork(equalizer.num_params)
 
 annotations = pd.read_csv("annotations.csv")
 audio_dir = "/home/hf1/Documents/soundfiles/SDDS_segmented_Allfiles"
-lr = 5e-6 # 1e-5 # 2e-3
+lr = 2e-3 # 1e-5 # 2e-3
 batch_size = 256 # 16 # 512
 num_epochs = 1000 # 1000
 log_dir = f"outputs/{MODEL_TYPE}_diff_apf"
@@ -83,7 +83,7 @@ dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size)
 folder = Path('runs', f'{MODEL_TYPE}_diff_apf')
 i = 1
 while folder.exists():
-    folder = Path('runs', f'{MODEL_TYPE}_diff_apf_{i}')
+    folder = Path('runs', f'{MODEL_TYPE}_diff_apf_1')
     i += 1
 
 # Create a SummaryWriter to log the training process to TensorBoard
