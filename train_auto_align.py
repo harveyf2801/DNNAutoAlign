@@ -54,10 +54,10 @@ net = ParameterNetwork(equalizer.num_params)
 
 annotations = pd.read_csv("annotations.csv")
 audio_dir = "/home/hf1/Documents/soundfiles/SDDS_segmented_Allfiles"
-lr = 2e-3 # 1e-5 # 2e-3
+lr = 1e-5 # 1e-5 # 2e-3
 batch_size = 256 # 16 # 512
-num_epochs = 1000 # 1000
-log_dir = f"outputs/{MODEL_TYPE}_diff_apf"
+num_epochs = 500 # 1000
+log_dir = f"outputs/{MODEL_TYPE}_diff_apf_2"
 
 # Create the log directory
 os.makedirs(log_dir, exist_ok=True)
@@ -80,11 +80,7 @@ dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size)
 
 # Create a folder to store the event files
 # increment the folder name if it already exists
-folder = Path('runs', f'{MODEL_TYPE}_diff_apf')
-i = 1
-while folder.exists():
-    folder = Path('runs', f'{MODEL_TYPE}_diff_apf_1')
-    i += 1
+folder = Path('runs', f'{MODEL_TYPE}_diff_apf_2')
 
 # Create a SummaryWriter to log the training process to TensorBoard
 writer = SummaryWriter(folder)
