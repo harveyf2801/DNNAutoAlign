@@ -1,8 +1,7 @@
 import torch
-from dataset import phase_differece_feature
-
 import torch.nn as nn
 import torch.nn.functional as F
+from dataset import phase_differece_feature
 
 
 class ParameterNetwork(torch.nn.Module):
@@ -25,9 +24,6 @@ class ParameterNetwork(torch.nn.Module):
         # Define max-pooling layer
         self.pool = nn.MaxPool1d(kernel_size=2, stride=2)
         
-        # Define transformer layer
-        self.transformer = nn.Transformer(d_model=256, nhead=8, num_encoder_layers=6, num_decoder_layers=6)
-        
         # Define fully connected layers
         self.fc1 = nn.Linear(256 * (self.input_size[1] // 8), 512)  # Adjusted input size based on max-pooling
         self.fc2 = nn.Linear(512, self.num_control_params)
@@ -40,12 +36,6 @@ class ParameterNetwork(torch.nn.Module):
         feature = self.pool(feature)
         feature = F.relu(self.conv3(feature))
         feature = self.pool(feature)
-
-        # Flatten the tensor to prepare for transformer layer
-        feature = feature.view(-1, 256, (self.input_size[1] // 8))
-
-        # Apply transformer layer
-        feature = self.transformer(feature, feature)
 
         # Flatten the tensor to prepare for fully connected layers
         feature = feature.view(-1, 256 * (self.input_size[1] // 8))
