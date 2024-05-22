@@ -30,9 +30,9 @@ net = ParameterNetwork(equalizer.num_params).to(gpu)
 annotations = pd.read_csv("annotations.csv")
 audio_dir = "/home/hf1/Documents/soundfiles/SDDS_segmented_Allfiles"
 lr = 1e-4
-batch_size = 32
-num_epochs = 100
-log_dir = f"outputs/{MODEL_TYPE}_diff_apf_2"
+batch_size = 128
+num_epochs = 1000
+log_dir = f"outputs/{MODEL_TYPE}_diff_apf_3"
 
 # Create the log directory
 os.makedirs(log_dir, exist_ok=True)
