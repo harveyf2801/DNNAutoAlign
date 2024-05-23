@@ -46,6 +46,8 @@ def export_validation_file(epoch: int,
     data = next(data_iter)
     input_x, target_y = data[0], data[1]
 
+    print(input_x.shape)
+
     # Move the input and target pairs to the GPU if available
     if use_gpu:
         input_x = input_x.cuda()
@@ -73,18 +75,18 @@ def export_validation_file(epoch: int,
     torchaudio.save(input_filepath, input_x.squeeze(0).cpu(), sr, backend="soundfile")
     torchaudio.save(pred_filepath, x_hat.squeeze(0).cpu(), sr, backend="soundfile")
 
-    print(loss(x_hat, target_y))
+    # print(loss(x_hat, target_y))
 
-    import sounddevice as sd
-    import time
-    audio_before = (input_x.squeeze(0) + target_y.squeeze(0)).cpu().numpy() / 2
-    audio_after = (x_hat.squeeze(0) + target_y.squeeze(0)).cpu().numpy() / 2
+    # import sounddevice as sd
+    # import time
+    # audio_before = (input_x.squeeze(0) + target_y.squeeze(0)).cpu().numpy() / 2
+    # audio_after = (x_hat.squeeze(0) + target_y.squeeze(0)).cpu().numpy() / 2
 
-    sd.play(audio_before[0], sr)
-    sd.wait()
-    time.sleep(0.2)
-    sd.play(audio_after[0], sr)
-    sd.wait()
+    # sd.play(audio_before[0], sr)
+    # sd.wait()
+    # time.sleep(0.2)
+    # sd.play(audio_after[0], sr)
+    # sd.wait()
 
 def validate(epoch: int,
             dataloader: torch.utils.data.DataLoader,
@@ -187,8 +189,8 @@ if __name__ == "__main__":
 
     # Create the parameter estimation network
     net = ParameterNetwork(equalizer.num_params)
-    net.load_state_dict(torch.load("outputs/diff_apf/models/1TCN_diff_apf_epoch_10_loss_1.1950842142105103.pth",
+    net.load_state_dict(torch.load("outputs/diff_apf/models/TCN_diff_apf_epoch_10_loss_1.1950842142105103.pth",
                                    map_location=torch.device('cpu'))['model_state_dict'],)
 
-    # export_validation_file(11, dataloader, net, equalizer, losses, use_gpu=False, sr=sample_rate)
-    validate(11, dataloader, net, equalizer, losses, loudness, quality, use_gpu=False, sr=sample_rate)
+    export_validation_file(11, dataloader, net, equalizer, losses, use_gpu=False, sr=sample_rate)
+    # validate(11, dataloader, net, equalizer, losses, loudness, quality, use_gpu=False, sr=sample_rate)

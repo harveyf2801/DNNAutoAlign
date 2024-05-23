@@ -69,10 +69,24 @@ def phase_differece_feature(input_x: torch.Tensor, target_y: torch.Tensor) -> to
     torch.Tensor: Phase difference feature.
     """
     # compute the phase difference between input and target
-    x_phs = stft(input_x.view(-1, input_x.size(-1)))
-    y_phs = stft(target_y.view(-1, target_y.size(-1)))
-    phase_diff = torch.real(y_phs - x_phs)
-    return phase_diff
+    x_stft = stft(input_x.view(-1, input_x.size(-1)))
+    y_stft = stft(target_y.view(-1, target_y.size(-1)))
+
+    # Extract the phase of the STFT results
+    x_phs = torch.angle(x_stft).cpu().numpy()
+    y_phs = torch.angle(y_stft).cpu().numpy()
+    
+    # Unwrap the phase angles using numpy
+    x_phs_unwrapped = np.unwrap(x_phs, axis=-1)
+    y_phs_unwrapped = np.unwrap(y_phs, axis=-1)
+    
+    # Compute the phase difference
+    phase_diff = y_phs_unwrapped - x_phs_unwrapped
+    
+    # Convert back to a PyTorch tensor
+    phase_diff_tensor = torch.tensor(phase_diff, dtype=torch.float32)
+
+    return phase_diff_tensor
 
 
 class AudioDataset(torch.nn.Module):
