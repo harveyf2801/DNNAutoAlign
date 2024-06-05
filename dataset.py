@@ -84,7 +84,7 @@ def phase_differece_feature(input_x: torch.Tensor, target_y: torch.Tensor) -> to
     phase_diff = y_phs_unwrapped - x_phs_unwrapped
     
     # Convert back to a PyTorch tensor
-    phase_diff_tensor = torch.tensor(phase_diff, dtype=torch.float32)
+    phase_diff_tensor = torch.tensor(phase_diff, dtype=torch.float32).to(input_x.device)
 
     return phase_diff_tensor
 
