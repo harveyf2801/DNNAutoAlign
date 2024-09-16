@@ -1,0 +1,42 @@
+TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+
+1. Definitions.
+
+   "License" shall mean the terms and conditions for use, reproduction, and distribution as defined by the following copyright license.
+
+   "Licensor" shall mean Harvey George Fretwell.
+
+   "You" (or "Your") shall mean an individual or Legal Entity exercising permissions granted by this License.
+
+   "Work" shall mean the contents of all repositories hosted by the user "harveyf2801" that do not contain an existing "LICENSE.txt" file.
+
+2. Grant of License.
+
+   Subject to the terms and conditions of this License, Licensor hereby grants You a non-exclusive, worldwide, royalty-free, non-transferable license to use, copy, and distribute the Work for non-commercial purposes only.
+
+3. Restrictions.
+
+   You may not modify, adapt, create derivative works from, distribute, sell, or sublicense the Work.
+
+   You may not use the Work for any commercial purposes without the express written permission of the Licensor.
+
+4. Reservation of Rights.
+
+   All rights not expressly granted herein are reserved by the Licensor.
+
+5. Disclaimer of Warranty.
+
+   The Work is provided "as is" without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and non-infringement. In no event shall the Licensor be liable for any claim, damages, or other liability, whether in an action of contract, tort, or otherwise, arising from, out of, or in connection with the Work or the use or other dealings in the Work.
+
+6. Governing Law.
+
+   This License shall be governed by and construed in accordance with the laws of England, excluding its conflicts of law provisions.
+
+7. Termination.
+
+   This License shall terminate automatically if You violate any of the terms and conditions of this License. Upon termination, You must destroy any copies of the Work in Your possession.
+
+8. Entire Agreement.
+
+   This License constitutes the entire agreement between the parties with respect to the Work licensed here. There are no understandings, agreements, or representations with respect to the Work not specified herein. The Licensor shall not be bound by any additional provisions that may appear in any communication from You.
+
